@@ -1,87 +1,38 @@
-from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.scatter import Scatter
-from kivy.graphics import Line, Color
-from kivy.clock import Clock
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Oct  6 23:06:41 2024
+
+@author: kaiab
+"""
+# %%imports
+import os
+os.chdir("C:/Users/kaiab/OneDrive/Desktop/pulse_ox")
+import data_aquisition as daq
+import spo2_calculation
+import neurokit_peak_detection
 import numpy as np
-import websockets
-import asyncio
-import threading
+import pandas as pd
+# set the working directory
+T = 10 # time in seconds that each calc is based on
+# %%
 
-class RealTimePlot(Scatter):
-    def __init__(self, **kwargs):
-        super(RealTimePlot, self).__init__(**kwargs)
-        self.size_hint = (1, 1)
-        self.data = []
-        self.canvas.add(Color(1, 1, 1))
-        self.line = Line(points=[], width=2)
-        self.canvas.add(self.line)
-        self.update_plot()
+# load a subject (1-15 should work)
+daq.load_subject(5)
 
-    def update_plot(self):
-        # Clear the old line
-        self.canvas.remove(self.line)
-        self.canvas.add(Color(1, 1, 1))
-        self.line = Line(points=[], width=2)
-        self.canvas.add(self.line)
+# while there is data left to be read, read it
+while (daq.curr_index != len(daq.r_data)):
+    r_segment, ir_segment = daq.get_data(T)  # get 10 seconds of data
+    # run peak detection on the IR segment
+    peak_locs = neurokit_peak_detection.get_peak_locs(ir_segment)[1].get("PPG_Peaks") # the stuff at the end here is just because the thing that is returned has a bunch of info we don't care about right now
+    #print(peak_locs)
+    neurokit_peak_detection.plot_with_peaks(r_segment, ir_segment, peak_locs) # can also use the built in show function from the neurokit module to visualize but that only shows the peaks on the signal it ran the algo on
+    print("HR:" + str((len(peak_locs)-1)/T*60)) # convert the number of peaks detected and the time overwhich they were collected into beats per minute
+    ACR, DCR, ACIR, DCIR, R, spo2 = spo2_calculation.calc_spo2(r_segment, ir_segment, peak_locs)
+    print(ACR)
+    print(DCR)
+    print(ACIR)
+    print(DCIR)
+    print(R)
+    print(spo2)
+    #print("RoR:" + str(R))
 
-        if len(self.data) > 1:
-            x = np.arange(len(self.data))
-            y = np.array(self.data)
-            points = [(xi, yi) for xi, yi in zip(x, y)]
-            self.line.points = [point for p in points for point in p]
-
-class MyApp(App):
-    def build(self):
-        self.plot = RealTimePlot()
-        self.start_websocket_client()
-        layout = BoxLayout()
-        layout.add_widget(self.plot)
-        return layout
-
-    def add_to_data(self, message):
-        def update():
-            try:
-                values = message.split(',')
-                values = [int(val) for val in values]
-                print(message)
-                self.plot.data.append(values[0])
-                if len(self.plot.data) > 1000:
-                    self.plot.data.pop(0)
-                self.plot.update_plot()
-            except ValueError:
-                print("Failed to convert message to integers")
-
-        # Schedule the update on the main thread
-        Clock.schedule_once(lambda dt: update())
-
-    def start_websocket_client(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        threading.Thread(target=self.websocket_thread, args=(loop,)).start()
-
-    def websocket_thread(self, loop):
-        loop.run_until_complete(self.websocket_task(loop))
-
-    async def websocket_task(self, loop):
-        uri = "ws://192.168.1.170:80/ws"
-        while True:
-            try:
-                async with websockets.connect(uri, ping_interval=None) as websocket:
-                    while True:
-                        try:
-                            message = await websocket.recv()
-                            # Use `Clock.schedule_once` to update the UI on the main thread
-                            Clock.schedule_once(lambda dt: self.add_to_data(message))
-                        except websockets.ConnectionClosedError as e:
-                            print(f"Connection closed with error: {e}")
-                            raise e
-            except websockets.ConnectionClosedError as e:
-                print(f"Reconnecting after connection closed: {e}")
-                await asyncio.sleep(5)
-            except Exception as e:
-                print(f"Unexpected error: {e}. Retrying...")
-                await asyncio.sleep(5)
-
-if __name__ == "__main__":
-    MyApp().run()
