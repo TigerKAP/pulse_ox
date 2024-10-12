@@ -1,0 +1,119 @@
+<Title@Label>
+    font_size: 32
+    bold: True
+    background_color: (0,0,0,0)
+    background_normal: ''
+    canvas.before:
+        Color:
+            rgba: (43/255,43/255,43/255,1)
+        Rectangle:
+            size: self.size
+            pos: self.pos
+
+
+<Information@Label>
+    font_size: 100
+    background_color: (0,0,0,0)
+    background_normal: ''
+    canvas.before:
+        Color:
+            rgba: (43/255,43/255,43/255,1)
+        Rectangle:
+            size: self.size
+            pos: self.pos
+
+
+<PulseOxLayout>
+    BoxLayout:
+        orientation: 'vertical'
+        size: root.width, root.height
+        
+        BoxLayout:
+            orientation: 'horizontal'
+            size: root.width, root.height
+            size_hint: (1,0.1)
+
+            Label:
+                font_size: 32
+                text: 'Pulse Oximeter'
+            Button:
+                id: process_data
+                text: 'Record Data'
+                size_hint: (0.3, 1)
+                font_size: 32
+                
+                on_press: root.record_data()
+
+        GridLayout:
+            cols: 1
+            rows: 3
+
+            spacing: 50
+            padding: 20
+
+            GridLayout:
+                cols: 2
+                rows: 1
+                spacing: 1
+
+                Label:
+                    text: ''
+                    size_hint: (0.025,1)
+                    canvas.before:
+                        Color:
+                            rgba: (12/255,234/255,194/255,1)
+                        Rectangle:
+                            size: self.size
+                            pos: self.pos
+                
+                BoxLayout:
+                    orientation: 'vertical'
+                    size: root.width, root.height
+                    spacing: 1
+
+                    Title:
+                        id: spO2_title
+                        text: 'spO2'
+                        color: (12/255,234/255,194/255,1)
+                        size_hint: (1,0.2)
+                    
+                    Information:
+                        id: spO2_data
+                        text: '--- %'
+                        color: (12/255,234/255,194/255,1)
+
+            
+            GridLayout:
+                cols: 2
+                rows: 1
+                spacing: 1
+
+                Label:
+                    text: ''
+                    size_hint: (0.025,1)
+                    canvas.before:
+                        Color:
+                            rgba: (12/255,234/255,194/255,1)
+                        Rectangle:
+                            size: self.size
+                            pos: self.pos
+                
+                BoxLayout:
+                    orientation: 'vertical'
+                    size: root.width, root.height
+                    spacing: 1
+
+                    Title:
+                        id: HR_title
+                        text: 'Heart Rate'
+                        color: (12/255,234/255,194/255,1)
+                        size_hint: (1,0.2)
+                    
+                    Information:
+                        id: HR_data
+                        text: '--- bmp'
+                        color: (12/255,234/255,194/255,1)
+        
+            #BoxLayout:
+                #id: box
+                #size_hint: (1,0.4)
