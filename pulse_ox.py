@@ -22,8 +22,8 @@ T = 10 # time in seconds that each calc is based on
 color_warning = (254/255,61/255,96/255)
 color_good = (12/255,234/255,194/255,1)
 R_values = []
-# load a subject (1-15 should work)
-daq.load_subject(10)
+# load a subject (1-22 should work)
+daq.load_subject(5)
 
 def back_end(self):
     #intializing plotting variables
@@ -59,8 +59,8 @@ def back_end(self):
         
         #Getting the data points in 10 sec interval
         plotting_points = [
-            (1000*(x/(daq.f_s*T)), #Getting time stamp of data and scaling it to fit window
-             250*((r_segment[x]-min(r_segment))/(max(r_segment)-min(r_segment))) #Getting pgg data and scaling it to fit window
+            (1000*(x/(daq.f_s*T)), #Calculating time stamp of data and scaling it to fit window
+             250*((r_segment[x]-min(r_segment))/(max(r_segment)-min(r_segment))) #Scaling PPG data to fit window
              ) 
              for x in range(len(r_segment))
             ]
@@ -70,31 +70,24 @@ def back_end(self):
         self.ids.box.canvas.add(Color(83/255, 214/255, 237/255))
         self.line = Line(points=plotting_points, width=2)
         self.ids.box.canvas.add(self.line)
-        print(ACR)
-        print(DCR)
-        print(ACIR)
-        print(DCIR)
-        print(R)
-        print(spo2)
+        
+
         R_values.append(R)
-        #print("RoR:" + str(R))
-        #time.sleep(0.2)
-    else: # Once data ends, stops timer and renables button
+    else: # Once data ends, stops scheduled loop and renables button
         self.ids.process_data.disabled = False
         self.timer.cancel()
+    
     R_start = R_values[:2]
     R_end = R_values[-2:]
     R_start = sum(R_start)/2
     R_end = sum(R_end)/2
     print(f"R_start: {R_start}\nR_end: {R_end}")
 
-
-
 Window.size = (500,700)
-
 Builder.load_file('pulse_ox.kv')
 
 class PulseOxLayout(Widget):
+    # Starts scheduled loop that updates labels every 0.1 seconds
     def record_data(self):
         self.timer = Clock.schedule_interval(self.update_label, 0.1)
     
@@ -103,6 +96,8 @@ class PulseOxLayout(Widget):
     
     def __init__(self, **kwargs):
         super(PulseOxLayout, self).__init__(**kwargs)
+
+        # Creating the line that will act as the PPG graph
         self.line = Line(points=[], width=2)
         self.ids.box.canvas.add(self.line)
 
