@@ -4,6 +4,7 @@ Gets data from the physionet dataset and returns it as an array
 """
 
 import pandas as pd
+import numpy as np
 import os
 
 r_data = []
@@ -33,4 +34,22 @@ def get_data(t):
         ret_r_data =  r_data[curr_index:end]
         ret_ir_data = ir_data[curr_index:end]
         curr_index = end
+    
+    light_data = [ret_r_data, ret_ir_data]
+
+    # Detrending PPG data
+    for i in range(2):
+        x_values = np.array([j for j in range(len(light_data[i]))])
+        y_values = np.array(light_data[i])
+
+        coeffs = np.polyfit(x_values, y_values, 3)
+        
+        # The last coefficient of polynomial fit was ommitted to prevent the removal of the DC component
+        fitted_line = [coeffs[0]*j**3 + coeffs[1]*j**2 + coeffs[2]*j for j in range(len(light_data[i]))]
+
+        light_data[i] = light_data[i] - fitted_line
+
+    ret_r_data = light_data[0]
+    ret_ir_data = light_data[1]
+
     return ret_r_data, ret_ir_data
