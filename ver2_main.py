@@ -1,3 +1,6 @@
+'''
+This is for live-data processing using websocket
+'''
 #Backend imports
 import os
 os.chdir("/Users/marcusvincentbellajaro/Documents/Coding_Projects/PulseOx")
