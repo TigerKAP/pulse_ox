@@ -1,3 +1,6 @@
+'''
+This is for importing and testing already collected data (e.g. Physionet data)
+'''
 #Backend imports
 import os
 os.chdir("/Users/marcusvincentbellajaro/Documents/Coding_Projects/PulseOx")
@@ -42,20 +45,12 @@ def back_end(self):
         self.ids.HR_data.text = f'{HR} bmp' # updating HR on GUI
         self.ids.spO2_data.text = f'{spo2} %' # updating spo2 on GUI
 
-        #Indicates on GUI if HR or spo2 are dangerous levels
-        if (HR > 100 or HR < 60):
-            self.ids.HR_data.color = color_warning
-            self.ids.HR_title.color = color_warning
-        else:
-            self.ids.HR_data.color = color_good
-            self.ids.HR_title.color = color_good
+        # Changing color based on HR and SpO2 values (danger levels)
+        self.ids.HR_data.color = color_warning if (HR > 100 or HR < 60) else color_good
+        self.ids.HR_title.color = self.ids.HR_data.color
 
-        if (spo2 < 92):
-            self.ids.spO2_data.color = color_warning
-            self.ids.spO2_title.color = color_warning
-        else:
-            self.ids.spO2_data.color = color_good
-            self.ids.spO2_title.color = color_good
+        self.ids.spO2_data.color = color_warning if (spo2 < 92) else color_good
+        self.ids.spO2_title.color = self.ids.spO2_data.color
         
         #Getting the data points in 10 sec interval
         plotting_points = [
