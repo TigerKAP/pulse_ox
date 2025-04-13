@@ -1,15 +1,7 @@
-'''
-This is for live-data processing using websocket
-'''
 #Backend imports
-import os
-os.chdir("/Users/marcusvincentbellajaro/Documents/Coding_Projects/PulseOx")
-import data_aquisition as daq
 import spo2_calculation
 import neurokit_peak_detection
 import numpy as np
-import pandas as pd
-import time
 import threading
 import asyncio
 import websockets
@@ -26,7 +18,7 @@ from kivy.graphics import Line, Color
 
 # Constants
 ESP32_WS_URL = "ws://192.168.4.1/ws"
-T = 10  # Time in seconds for calculations
+T = 5  # Time in seconds for calculations
 BUFFER_SIZE = T*400  # Number of elements to collect before processing
 color_warning = (254 / 255, 61 / 255, 96 / 255)
 color_good = (12 / 255, 234 / 255, 194 / 255, 1)
@@ -76,7 +68,6 @@ class WebSocketClient:
         """Stop the WebSocket client."""
         self.is_running = False
 
-
 class PulseOxLayout(Widget):
     def __init__(self, **kwargs):
         super(PulseOxLayout, self).__init__(**kwargs)
@@ -117,6 +108,9 @@ class PulseOxLayout(Widget):
                 ir_segment = self.data_buffer['ir'][:BUFFER_SIZE]
                 timestamps_segment = self.timestamps_buffer[:BUFFER_SIZE]
 
+                r_segment = np.array(r_segment, dtype=np.float64)
+                ir_segment = np.array(ir_segment, dtype=np.float64)
+
                 # Process the data
                 self.process_data(r_segment, ir_segment, timestamps_segment)
 
@@ -130,17 +124,17 @@ class PulseOxLayout(Widget):
             traceback.print_exc()
     
     # 3rd degree polynomial detrending
-    def detrend_data(self, r_segment, ir_segment):
+    def detrend_data(self, r_segment, ir_segment, time_stamps):
         light_data = [r_segment, ir_segment]
-
+        x_values = np.array(time_stamps)
         for i in range(2):
-            x_values = np.array([j for j in range(len(light_data[i]))])
             y_values = np.array(light_data[i])
 
             coeffs = np.polyfit(x_values, y_values, 3)
             
             # The last coefficient of polynomial fit was ommitted to prevent the removal of the DC component
-            fitted_line = [coeffs[0]*j**3 + coeffs[1]*j**2 + coeffs[2]*j for j in range(len(light_data[i]))]
+            fitted_line = [coeffs[0]*j**3 + coeffs[1]*j**2 + coeffs[2]*j for j in x_values]
+
 
             light_data[i] = light_data[i] - fitted_line
 
@@ -150,12 +144,15 @@ class PulseOxLayout(Widget):
 
     # Process the collected data segment and update the UI
     def process_data(self, r_segment, ir_segment, timestamps_segment):
+        # Coverting timestamps into minutes
+        timestamps_segment = [x/(1000*60) for x in timestamps_segment]
         # Detrending data prior to processing
-        r_segment, ir_segment = self.detrend_data(r_segment, ir_segment)
+        r_segment, ir_segment = self.detrend_data(r_segment, ir_segment, timestamps_segment)
+
 
         # Running peak detection on the IR segment
         peak_locs = neurokit_peak_detection.get_peak_locs(ir_segment)[1].get("PPG_Peaks", [])
-        HR = (len(peak_locs) - 1) / (timestamps_segment[-1]-timestamps_segment[0]) * 60  # Convert to BPM
+        HR = (len(peak_locs) - 1) / (timestamps_segment[-1]-timestamps_segment[0]) # Convert to BPM
         _, _, _, _, _, spo2 = spo2_calculation.calc_spo2(r_segment, ir_segment, peak_locs)
 
         # Updating GUI info
